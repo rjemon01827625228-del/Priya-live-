@@ -1,0 +1,179 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile document for Priya Live.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the profile owner."
+        },
+        "username": {
+          "type": "string",
+          "description": "Display name of the user (1 to 50 characters)."
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["Male", "Female", "Other"],
+          "description": "User gender selection."
+        },
+        "country": {
+          "type": "string",
+          "description": "Selected country name (1 to 60 characters)."
+        },
+        "countryFlag": {
+          "type": "string",
+          "description": "Country flag emoji (1 to 20 characters)."
+        },
+        "bio": {
+          "type": "string",
+          "description": "Optional user bio (up to 300 characters)."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Optional avatar URI or URL string (up to 1000 characters)."
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Optional non-negative coin balance."
+        },
+        "diamonds": {
+          "type": "integer",
+          "description": "Optional non-negative diamond balance."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "username",
+        "gender",
+        "country",
+        "countryFlag",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPost": {
+      "title": "UserPost",
+      "description": "A social feed post authored by the authenticated user.",
+      "type": "object",
+      "properties": {
+        "postId": {
+          "type": "string",
+          "description": "Unique identifier of the post matching the document ID."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the post author."
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Display name of the author (1 to 50 characters)."
+        },
+        "content": {
+          "type": "string",
+          "description": "Text content of the post (1 to 500 characters)."
+        },
+        "likesCount": {
+          "type": "integer",
+          "description": "Non-negative like count for the post."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "postId",
+        "userId",
+        "authorName",
+        "content",
+        "likesCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PartyRoom": {
+      "title": "PartyRoom",
+      "description": "Real-time voice party room configuration including synchronized seatCount (8, 12, or 16).",
+      "type": "object",
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "description": "Unique identifier of the party room matching the document ID."
+        },
+        "hostUid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the party room owner."
+        },
+        "roomTitle": {
+          "type": "string",
+          "description": "Display title of the party room (1 to 100 characters)."
+        },
+        "seatCount": {
+          "type": "integer",
+          "description": "Configured seat count for the Party Board (8, 12, or 16)."
+        },
+        "isLocked": {
+          "type": "boolean",
+          "description": "Whether the room is currently locked by the owner."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "roomId",
+        "hostUid",
+        "roomTitle",
+        "seatCount",
+        "isLocked",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores per-user profile documents scoped strictly to the authenticated user."
+    },
+    "/users/{userId}/posts/{postId}": {
+      "schema": {
+        "$ref": "#/entities/UserPost"
+      },
+      "description": "Stores user-authored social posts under the user's document."
+    },
+    "/party_rooms/{roomId}": {
+      "schema": {
+        "$ref": "#/entities/PartyRoom"
+      },
+      "description": "Stores real-time party room configuration including seatCount (8, 12, or 16)."
+    }
+  }
+}

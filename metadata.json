@@ -1,0 +1,6 @@
+{
+  "name": "Priya Live",
+  "description": "Live • Connect • Make Friends — Priya Live social live-streaming and audio party app",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

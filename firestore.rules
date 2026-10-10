@@ -1,0 +1,135 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userId == request.auth.uid && data.userId == userId &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 50 &&
+             data.gender is string && data.gender.size() >= 1 && data.gender.size() <= 20 &&
+             (data.gender == 'Male' || data.gender == 'Female' || data.gender == 'Other') &&
+             data.country is string && data.country.size() >= 1 && data.country.size() <= 60 &&
+             data.countryFlag is string && data.countryFlag.size() >= 1 && data.countryFlag.size() <= 20 &&
+             (!('bio' in data) || data.bio == null || (data.bio is string && data.bio.size() <= 300)) &&
+             (!('avatarUrl' in data) || data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 1000)) &&
+             (!('coins' in data) || (data.coins is int && data.coins >= 0)) &&
+             (!('diamonds' in data) || (data.diamonds is int && data.diamonds >= 0)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidUserPost(data, userId, postId) {
+      return data.postId is string && data.postId.size() >= 1 && data.postId.size() <= 128 &&
+             data.postId == postId &&
+             data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.userId == request.auth.uid && data.userId == userId &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 50 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 500 &&
+             data.likesCount is int && data.likesCount >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPartyRoom(data, roomId) {
+      return data.roomId is string && data.roomId.size() >= 1 && data.roomId.size() <= 128 &&
+             data.roomId == roomId &&
+             data.hostUid is string && data.hostUid.size() >= 1 && data.hostUid.size() <= 128 &&
+             data.hostUid == request.auth.uid &&
+             data.roomTitle is string && data.roomTitle.size() >= 1 && data.roomTitle.size() <= 100 &&
+             data.seatCount is int && (data.seatCount == 8 || data.seatCount == 12 || data.seatCount == 16) &&
+             data.isLocked is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().keys().hasAll(['userId', 'username', 'gender', 'country', 'countryFlag', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'username', 'gender', 'country', 'countryFlag', 'bio', 'avatarUrl', 'coins', 'diamonds', 'createdAt', 'updatedAt']);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['username', 'gender', 'country', 'countryFlag', 'bio', 'avatarUrl', 'coins', 'diamonds', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /posts/{postId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(postId);
+        allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        allow create: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(postId) &&
+                         isValidUserPost(incoming(), userId, postId) &&
+                         incoming().keys().hasAll(['postId', 'userId', 'authorName', 'content', 'likesCount', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['postId', 'userId', 'authorName', 'content', 'likesCount', 'createdAt', 'updatedAt']);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(userId) &&
+                         isValidId(postId) &&
+                         isValidUserPost(incoming(), userId, postId) &&
+                         incoming().postId == existing().postId &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['authorName', 'content', 'likesCount', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(postId);
+      }
+    }
+
+    match /party_rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId);
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       isValidPartyRoom(incoming(), roomId) &&
+                       incoming().keys().hasAll(['roomId', 'hostUid', 'roomTitle', 'seatCount', 'isLocked', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['roomId', 'hostUid', 'roomTitle', 'seatCount', 'isLocked', 'createdAt', 'updatedAt']);
+
+      allow update: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       existing().hostUid == request.auth.uid &&
+                       isValidPartyRoom(incoming(), roomId) &&
+                       incoming().roomId == existing().roomId &&
+                       incoming().hostUid == existing().hostUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['roomTitle', 'seatCount', 'isLocked', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(roomId) && existing().hostUid == request.auth.uid;
+    }
+  }
+}
